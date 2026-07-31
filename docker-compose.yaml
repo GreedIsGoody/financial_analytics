@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL (Transactional DB)
+  postgres:
+    image: postgres:16-alpine
+    container_name: fa_postgres
+    environment:
+      POSTGRES_DB: financial_db
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: app_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init_postgres.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d financial_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. ClickHouse (Analytical DB)
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3-alpine
+    container_name: fa_clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+volumes:
+  postgres_data:
+  clickhouse_data:
