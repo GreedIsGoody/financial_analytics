@@ -1,5 +1,6 @@
 import asyncio
 import logging 
+from datetime import datetime
 from sqlalchemy import select, update 
 from app.core.postgres import async_session_maker
 from app.infrastructure.db.models import OutboxEventModel
@@ -10,7 +11,7 @@ async def process_outbox_events():
         #Events with status PENDING
         stmt = (
             select(OutboxEventModel)
-            .where(OutboxEventModel.status == "PENDING")
+            .where(OutboxEventModel.processed == False)
             .limit(100)
         )
         result = await session.execute(stmt)
@@ -20,12 +21,21 @@ async def process_outbox_events():
             return 
         print(f"🚚 found {len(events)} events what was not sent.")
         
+        
+        
         #Format batch for Clickhouse
         ch_rows = []
         processed_ids = []
         
         for event in events:
             p = event.payload
+            
+            created_at_dt = (
+            datetime.fromisoformat(p["created_at"])
+            if isinstance(p["created_at"], str)
+            else p["created_at"]
+            )
+            
             ch_rows.append(
                 (
                     p["transaction_id"],
@@ -33,7 +43,7 @@ async def process_outbox_events():
                     p["amount"],
                     p["currency"],
                     p["status"],
-                    p["created_at"],
+                    created_at_dt,
                 )
             )
             processed_ids.append(event.id)
@@ -55,7 +65,7 @@ async def process_outbox_events():
         update_stmt = (
             update(OutboxEventModel)
             .where(OutboxEventModel.id.in_(processed_ids))
-            .values(status="PROCESSED")
+            .values(processed=True)
         )
         await session.execute(update_stmt)
         await session.commit()
@@ -70,5 +80,5 @@ async def run_outbox_relayer(poll_interval: int = 3):
         try:
             await process_outbox_events()
         except Exception as e:
-            print("Outbox layer error : {e}")
+            print(f"Outbox layer error : {e}")
         await asyncio.sleep(poll_interval)
