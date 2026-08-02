@@ -6,11 +6,11 @@ services:
     image: postgres:16-alpine
     container_name: fa_postgres
     environment:
-      POSTGRES_DB: financial_db
-      POSTGRES_USER: app_user
-      POSTGRES_PASSWORD: app_password
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init_postgres.sql:/docker-entrypoint-initdb.d/init.sql

@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import String, Boolean, Datetime , func, Index, Numeric
+from sqlalchemy import String, Boolean, DateTime , func, Index, Numeric
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID,JSONB
 
@@ -19,7 +19,7 @@ class TransactionModel(Base):
     amount: Mapped[Decimal] = mapped_column(Numeric(15,2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="PAID")
-    created_at: Mapped[datetime] = mapped_column(Datetime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     
 #model for outbox_events model for saving our data
 class OutboxEventModel(Base):
