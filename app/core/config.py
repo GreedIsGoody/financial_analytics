@@ -10,6 +10,13 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = 5434
     POSTGRES_DB: str = "financial_db"
     
+    # ClickHouse configs
+    CLICKHOUSE_HOST: str = "localhost"
+    CLICKHOUSE_PORT: int = 8123
+    CLICKHOUSE_USER: str = "default"
+    CLICKHOUSE_PASSWORD: str = "clickhouse_password"
+    CLICKHOUSE_DB: str = "default"
+    
     @property
     def DATABASE_URL_ASYNCPG(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
