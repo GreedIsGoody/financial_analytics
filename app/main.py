@@ -1,10 +1,16 @@
 import asyncio
+import logging
 from fastapi import FastAPI 
 from app.core.config import settings 
 from app.api.v1.transactions import router as transactions_router
 from contextlib import asynccontextmanager
 from app.core.clickhouse import init_clickhouse
 from app.infrastructure.messaging.outbox_relayer import run_outbox_relayer
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
@@ -15,6 +21,10 @@ async def lifespan(app:FastAPI):
     yield
     
     relayer_task.cancel()
+    try:
+        await relayer_task
+    except asyncio.CancelledError:
+        pass
     
 
 
