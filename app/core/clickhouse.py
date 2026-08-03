@@ -14,20 +14,20 @@ async def get_clickhouse_client() -> AsyncClient:
     
 async def init_clickhouse():
     client = await get_clickhouse_client()
-    
-    create_table_query = """
-    CREATE TABLE IF NOT EXISTS transaction_analytics (
-        id UUID,
-        user_id UUID,
-        amount Decimal(18,4),
-        currency LowCardinality(String),
-        status LowCardinality(String),
-        created_at DateTime
-    )
-    ENGINE = MergeTree()
-    ORDER BY (created_at, user_id)
-    """
-    
-    await client.command(create_table_query)
-    print("✅ Clickhouse table 'transaction_analytics' ready!")
+    #async with to automatically close aihttp-session
+    async with client:
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS transactions_analytics (
+            id UUID,
+            user_id UUID,
+            amount Decimal(18, 4),
+            currency LowCardinality(String),
+            status LowCardinality(String),
+            created_at DateTime
+        )
+        ENGINE = MergeTree()
+        ORDER BY (created_at, user_id);
+        """
+        await client.command(create_table_query)
+        print("✅ Clickhouse table 'transaction_analytics' ready!")
     
