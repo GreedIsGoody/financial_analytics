@@ -1,10 +1,12 @@
 import asyncio
-import logging 
-from datetime import datetime
+import logging
+from datetime import datetime, timezone
 from sqlalchemy import select, update 
 from app.core.postgres import async_session_maker
 from app.infrastructure.db.models import OutboxEventModel
 from app.core.clickhouse import get_clickhouse_client
+
+logger = logging.getLogger(__name__)
 
 async def process_outbox_events():
     async with async_session_maker() as session:
@@ -19,7 +21,7 @@ async def process_outbox_events():
         
         if not events:
             return 
-        print(f"🚚 found {len(events)} events what was not sent.")
+        logger.info(f"🚚 found {len(events)} events what was not sent.")
         
         
         
@@ -30,11 +32,17 @@ async def process_outbox_events():
         for event in events:
             p = event.payload
             
-            created_at_dt = (
-            datetime.fromisoformat(p["created_at"])
-            if isinstance(p["created_at"], str)
-            else p["created_at"]
-            )
+            raw_created_at = p.get("created_at")
+            if isinstance(raw_created_at, str):
+                created_at_dt = datetime.fromisoformat(raw_created_at)
+            elif isinstance(raw_created_at, datetime):
+                created_at_dt = raw_created_at
+            else:
+                created_at_dt = datetime.now(timezone.utc)
+            
+            if created_at_dt.tzinfo is not None:
+                created_at_dt = created_at_dt.replace(tzinfo=None)
+            
             
             ch_rows.append(
                 (
@@ -70,15 +78,28 @@ async def process_outbox_events():
         await session.execute(update_stmt)
         await session.commit()
         
-        print(
+        logger.info(
             f"✅ {len(events)} events succesfully sended to ClickHouse!"
         )
         
 async def run_outbox_relayer(poll_interval: int = 3):
-    print("Outbox relayer is working")
+    
+    logger.info("Outbox Relayer running.")
+    backoff = poll_interval
+    
     while True:
         try:
             await process_outbox_events()
+            backoff=poll_interval
+            
+        except asyncio.CancelledError:
+            logger.info("🛑 Outbox Relayer (Graceful Shutwodn)...")
+            break
+        
         except Exception as e:
-            print(f"Outbox layer error : {e}")
+            logger.error(f"Outbox layer error : {e}. Retry after {backoff} sec")
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 2, 60)
+            continue
+        
         await asyncio.sleep(poll_interval)
