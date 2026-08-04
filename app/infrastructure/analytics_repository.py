@@ -9,7 +9,7 @@ from app.domain.analytics import (
 )
 
 
-class AnalyticsResponse:
+class AnalyticsRepository:
     
     def __init__(self, ch_client:AsyncClient):
         self.ch_client = ch_client
