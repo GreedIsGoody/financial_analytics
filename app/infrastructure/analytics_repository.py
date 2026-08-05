@@ -34,18 +34,17 @@ class AnalyticsRepository:
         
         if total_res.result_rows and total_res.result_rows[0]:
             cnt, vol, avg_val = total_res.result_rows[0]
-            
             total_cnt = int(cnt or 0)
             
-            if vol is not None and not (
-                isinstance(avg_val, float) and math.isnan(vol)
-            ):
-                total_vol = Decimal(str(vol))
-                
+            TWO_PLACES = Decimal("0.01")
+            
+            if vol is not None and not (isinstance(vol, float) and math.isnan(vol)):
+                total_vol = Decimal(str(vol)).quantize(TWO_PLACES)
+
             if avg_val is not None and not (
                 isinstance(avg_val, float) and math.isnan(avg_val)
             ):
-                avg_amt = Decimal(str(avg_val))
+                avg_amt = Decimal(str(avg_val)).quantize(TWO_PLACES)
         #Counting agregate by status 
         status_query = """
             SELECT
@@ -67,7 +66,7 @@ class AnalyticsRepository:
                 if row[2] is not None and not (
                     isinstance(row[2], float) and math.isnan(row[2])
                 ):
-                    status_vol = Decimal(str(row[2]))
+                    status_vol = Decimal(str(row[2])).quantize(TWO_PLACES)
 
                 by_status.append(
                     StatusSummary(
