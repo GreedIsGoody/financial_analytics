@@ -59,7 +59,7 @@ async def process_outbox_events():
             
         async with await get_clickhouse_client() as ch_client:
             await ch_client.insert(
-                table="transaction_analytics",
+                table="transactions_analytics",
                 column_names = [
                     "id",
                     "user_id",
