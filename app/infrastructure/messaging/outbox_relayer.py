@@ -1,10 +1,19 @@
 import asyncio
 import logging
+import json
+import redis.asyncio as aioredis
 from datetime import datetime, timezone
 from sqlalchemy import select, update 
 from app.core.postgres import async_session_maker
 from app.infrastructure.db.models import OutboxEventModel
 from app.core.clickhouse import get_clickhouse_client
+from app.core.config import settings 
+
+
+redis_client = aioredis.from_url(
+    f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}",
+    protocol=2
+)
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +65,20 @@ async def process_outbox_events():
             )
             processed_ids.append(event.id)
             
+            #Publicate a event in Redis PUB for WEBSOCKETS
+            ws_payload = {
+                "event_type": event.event_type,
+                "data" : {
+                    "transaction_id":  str(p["transaction_id"]),
+                    "user_id": str(p["user_id"]),
+                    "amount": str(p["amount"]),
+                    "currency": p["currency"],
+                    "status": p["status"],
+                    "created_at": created_at_dt.isoformat(),
+                },
+            }
+            
+            
             
         async with await get_clickhouse_client() as ch_client:
             await ch_client.insert(
@@ -81,6 +104,13 @@ async def process_outbox_events():
         logger.info(
             f"✅ {len(events)} events succesfully sended to ClickHouse!"
         )
+        ws_payloads = []
+        for payload in ws_payloads:
+            await redis_client.publish("analytics_events", json.dumps(payload))
+        
+            
+        
+        
         
 async def run_outbox_relayer(poll_interval: int = 3):
     

@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     CLICKHOUSE_PASSWORD: str = "clickhouse_password"
     CLICKHOUSE_DB: str = "default"
     
+    #Redis config
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT : int = 6379
+    
     @property
     def DATABASE_URL_ASYNCPG(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
