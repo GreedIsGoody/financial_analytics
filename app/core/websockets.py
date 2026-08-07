@@ -32,7 +32,7 @@ class ConnectionManager:
                 await connection.send_json(message)
             except Exception as e:
                 logger.error(f"Error of sending in WS: {e}")
-                self.disconnect(connection)
+                await self.disconnect(connection)
                 
 manager = ConnectionManager()
 ws_router = APIRouter()

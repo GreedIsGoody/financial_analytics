@@ -10,7 +10,7 @@ from app.core.websockets import manager, ws_router
 from app.core.config import settings 
 from app.api.v1.transactions import router as transactions_router
 from app.core.clickhouse import init_clickhouse
-from app.infrastructure.messaging.outbox_relayer import run_outbox_relayer
+from app.infrastructure.messaging.outbox_relayer import close_redis_client, run_outbox_relayer
 from app.api.v1.analytics import router as analytics_router
 
 logging.basicConfig(
@@ -39,7 +39,7 @@ async def redis_listener():
                 logger.info(f"📩 Sending event to WebSockets: {data}")
                 await manager.broadcast(data)
             
-    except asyncio.CancelledError:
+    finally:
         await pubsub.unsubscribe("analytics_events")
         await redis.close()
         logger.info("Subscribe on Redis is closed")
@@ -61,7 +61,9 @@ async def lifespan(app:FastAPI):
         try:
             await task
         except asyncio.CancelledError:
-            pass    
+            pass
+
+    await close_redis_client()
 
 
 

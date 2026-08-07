@@ -17,6 +17,10 @@ redis_client = aioredis.from_url(
 
 logger = logging.getLogger(__name__)
 
+
+async def close_redis_client() -> None:
+    await redis_client.aclose()
+
 async def process_outbox_events():
     async with async_session_maker() as session:
         #Events with status PENDING
@@ -37,6 +41,7 @@ async def process_outbox_events():
         #Format batch for Clickhouse
         ch_rows = []
         processed_ids = []
+        ws_payloads = []
         
         for event in events:
             p = event.payload
@@ -66,7 +71,7 @@ async def process_outbox_events():
             processed_ids.append(event.id)
             
             #Publicate a event in Redis PUB for WEBSOCKETS
-            ws_payload = {
+            ws_payloads.append({
                 "event_type": event.event_type,
                 "data" : {
                     "transaction_id":  str(p["transaction_id"]),
@@ -76,7 +81,7 @@ async def process_outbox_events():
                     "status": p["status"],
                     "created_at": created_at_dt.isoformat(),
                 },
-            }
+            })
             
             
             
@@ -104,7 +109,6 @@ async def process_outbox_events():
         logger.info(
             f"✅ {len(events)} events succesfully sended to ClickHouse!"
         )
-        ws_payloads = []
         for payload in ws_payloads:
             await redis_client.publish("analytics_events", json.dumps(payload))
         
